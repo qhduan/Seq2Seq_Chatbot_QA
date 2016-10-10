@@ -1,0 +1,14 @@
+{
+    "__author__": "qhduan@memect.co",
+    "input_len": 20,
+    "output_len": 32,
+    "size": 500,
+    "depth": 2,
+    "dropout": 1.0,
+    "batch_size": 64,
+    "random_state": 0,
+    "learning_rate": 0.0003,
+    "epoch": 5,
+    "train_device": "/gpu:0",
+    "test_device": "/cpu:0"
+}

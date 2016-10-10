@@ -1,0 +1,6 @@
+*.py[cod]
+.ipynb_checkpoints
+db/conversation.db
+db/dgk_shooter_min.conv
+model/model.ckpt
+model/model.ckpt.meta
