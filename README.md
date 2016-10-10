@@ -30,14 +30,21 @@ sklearn 科学运算
 
 tqdm 进度条
 
+大概也就依赖这些，如果只是测试，装一个cpu版本的TensorFlow就行了，也很快。
+
+如果要训练还是必须要用CUDA，否则肯定超级慢超级慢～～
+
+项目里有些文件很大，我标了***太大了传不到GitHub***，如果想要完整的数据库和训练好的模型直接测试，提供一个地址：
+
+http://pan.baidu.com/s/1o8IYtWe
 
 # 项目文件
 
 db/ 数据文件夹
 
-dgk_shooter_min.conv 数据，来源 https://github.com/rustch3n/dgk_lost_conv 电影对话 ***太大了传不到GitHub，在gitignore***
+dgk_shooter_min.conv 数据，来源 https://github.com/rustch3n/dgk_lost_conv 电影对话 ***太大了传不到GitHub***
 
-dgk_shooter_min.conv.7z 上个文件的压缩版
+dgk_shooter_min.conv.7z 上个文件的压缩版，解压了就是上个文件，当然你也可以去原Git找，他那也是压缩包反正……
 
 chinese.txt 小学生必须掌握的2500个汉字
 
@@ -45,9 +52,11 @@ gb2312_level1.txt GB2312编码内的一级字库
 
 gb2312_level2.txt GB2312编码内的二级字库
 
+*上面几个汉字文件主要是生成字典用的，我知道一般的办法可能是跑一遍数据库，然后生成词频（字频）之类的，然后自动生成一个词典，不过我就是不想那么做……总觉得那么做感觉不纯洁～～*
+
 decode_conv.ipynb jupyter notebook文件，用来把dgk_shooter_min.conv文件中的对话转换到conversation.db的数据库
 
-conversation.db 上个程序生成的数据库 ***太大了传不到GitHub，在gitignore***
+conversation.db 上个程序生成的数据库 ***太大了传不到GitHub***
 
 generate_dict.ipynb jupyter notebook文件，用来生成词典，例如2500个小学生必备汉字+英文+标点，这样的词典，我没有用数据库按字频生成词典
 
@@ -55,9 +64,9 @@ dictionary.json 上个程序生成的词典
 
 model/ 模型文件夹，保存生成好的模型
 
-model.ckpt 这个文件和下面文件都是TensorFlow的模型文件，或者说session文件？ ***太大了传不到GitHub，在gitignore***
+model.ckpt 这个文件和下面文件都是TensorFlow的模型文件，或者说session文件？ ***太大了传不到GitHub***
 
-model.ckpt.meta ***太大了传不到GitHub，在gitignore***
+model.ckpt.meta ***不算太大，但是上个都没传我这个还传它做毛啊也十几兆呢***
 
 ./ 根目录
 
