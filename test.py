@@ -20,19 +20,8 @@ encoder_inputs = [tf.placeholder(tf.int32, [None], name='encoder_inputs_{}'.form
                   for i in range(data_util.input_len)]
 decoder_inputs = [tf.placeholder(tf.int32, [None], name='decoder_inputs_{}'.format(i))
                   for i in range(data_util.output_len)]
-decoder_targets = [tf.placeholder(tf.int32, [None], name='decoder_targets_{}'.format(i))
-                   for i in range(data_util.output_len)]
-decoder_weights = [tf.placeholder(tf.float32, [None], name='decoder_weights_{}'.format(i))
-                   for i in range(data_util.output_len)]
 
-outputs, states = data_util.build_model(encoder_inputs, decoder_inputs, True)
-
-loss_func = tf.nn.seq2seq.sequence_loss(
-    outputs,
-    decoder_targets,
-    decoder_weights,
-    data_util.dim
-)
+outputs, states = data_util.build_model(encoder_inputs, decoder_inputs, feed_previous=True, dropout=1.0)
 
 sess = tf.Session()
 

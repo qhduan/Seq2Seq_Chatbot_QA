@@ -2,68 +2,83 @@
 
 __author__ = 'qhduan@memect.co'
 
+import os
 import sys
 import math
 import json
 import time
 
 import numpy as np
-from sklearn.utils import shuffle
 import tensorflow as tf
 from tqdm import tqdm
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(current_dir)
+
 import data_util
 
-tf.set_random_seed(data_util.random_state)
-tf.device(data_util.train_device)
+def main():
 
-encoder_inputs = [tf.placeholder(tf.int32, [None], name='encoder_inputs_{}'.format(i))
-                  for i in range(data_util.input_len)]
-decoder_inputs = [tf.placeholder(tf.int32, [None], name='decoder_inputs_{}'.format(i))
-                  for i in range(data_util.output_len)]
-decoder_targets = [tf.placeholder(tf.int32, [None], name='decoder_targets_{}'.format(i))
-                   for i in range(data_util.output_len)]
-decoder_weights = [tf.placeholder(tf.float32, [None], name='decoder_weights_{}'.format(i))
-                   for i in range(data_util.output_len)]
+    tf.set_random_seed(data_util.random_state)
+    sess = tf.Session()
+    tf.device(data_util.train_device)
 
-print('build model')
-outputs, states = data_util.build_model(encoder_inputs, decoder_inputs)
+    encoder_inputs = [tf.placeholder(tf.int32, [None], name='encoder_inputs_{}'.format(i))
+                      for i in range(data_util.input_len)]
+    decoder_inputs = [tf.placeholder(tf.int32, [None], name='decoder_inputs_{}'.format(i))
+                      for i in range(data_util.output_len)]
+    decoder_targets = [tf.placeholder(tf.int32, [None], name='decoder_targets_{}'.format(i))
+                       for i in range(data_util.output_len)]
+    decoder_weights = [tf.placeholder(tf.float32, [None], name='decoder_weights_{}'.format(i))
+                       for i in range(data_util.output_len)]
 
-loss_func = tf.nn.seq2seq.sequence_loss(
-    outputs,
-    decoder_targets,
-    decoder_weights,
-    data_util.dim
-)
+    print('build model')
+    outputs, states = data_util.build_model(encoder_inputs, decoder_inputs)
 
-opt = tf.train.AdamOptimizer(
-    learning_rate=data_util.learning_rate
-)
+    loss_func = tf.nn.seq2seq.sequence_loss(
+        outputs,
+        decoder_targets,
+        decoder_weights,
+        data_util.dim
+    )
 
-tvars = tf.trainable_variables()
-grads, _ = tf.clip_by_global_norm(tf.gradients(loss_func, tvars), 5)
+    opt = tf.train.AdamOptimizer(
+        learning_rate=data_util.learning_rate
+    )
 
-optimizer = opt.apply_gradients(zip(grads, tvars))
+    tvars = tf.trainable_variables()
+    grads, _ = tf.clip_by_global_norm(tf.gradients(loss_func, tvars), 5)
 
-opt_op = opt.minimize(loss_func)
+    optimizer = opt.apply_gradients(zip(grads, tvars))
 
-print('load data')
-asks, answers = data_util.read_db('db/conversation.db')
+    opt_op = opt.minimize(loss_func)
 
-print('size of asks and answers: {}, {}'.format(len(asks), len(answers)))
+    init = tf.initialize_all_variables()
 
-sess = tf.Session()
+    sess.run(init)
 
-init = tf.initialize_all_variables()
+    ops = (opt_op, outputs, loss_func)
 
-sess.run(init)
+    print('load data')
+    asks, answers = data_util.read_db('db/conversation.db')
+    print('size of asks and answers: {}, {}'.format(len(asks), len(answers)))
 
-ops = (opt_op, outputs, loss_func)
+    print('start train')
+    train(
+        data_util.epoch, asks, answers,
+        encoder_inputs, decoder_inputs, decoder_targets, decoder_weights,
+        sess, ops
+    )
 
-samples_per_epoch = math.ceil(len(asks) / data_util.batch_size) * data_util.batch_size
-print('samples_per_epoch', samples_per_epoch)
+    print('save model')
+    data_util.save_model(sess)
 
-def train(epoch):
+    print('train done')
+
+def train(epoch, asks, answers, encoder_inputs, decoder_inputs, decoder_targets, decoder_weights, sess, ops):
+    samples_per_epoch = math.ceil(len(asks) / data_util.batch_size) * data_util.batch_size
+    print('samples_per_epoch', samples_per_epoch)
+
     metrics = '   '.join([
         '\r[{}]',
         '{:.1f}%',
@@ -113,8 +128,5 @@ def train(epoch):
                 break
         print('\n')
 
-print('start train')
-train(data_util.epoch)
-
-print('save model')
-data_util.save_model(sess)
+if __name__ == '__main__':
+    main()
