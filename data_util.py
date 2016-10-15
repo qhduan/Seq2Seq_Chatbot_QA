@@ -13,8 +13,9 @@ import numpy as np
 from sklearn.utils import shuffle
 from tqdm import tqdm
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-os.chdir(current_dir)
+def with_path(p):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(current_dir, p)
 
 EOS = '<eos>'
 UNK = '<unk>'
@@ -37,7 +38,7 @@ def time(s):
     return ret
 
 def load_dictionary():
-    with open('db/dictionary.json', 'r') as fp:
+    with open(with_path('db/dictionary.json'), 'r') as fp:
         dictionary = [EOS, UNK, PAD, GO] + json.load(fp)
         index_word = OrderedDict()
         word_index = OrderedDict()
@@ -48,7 +49,7 @@ def load_dictionary():
     return dim, dictionary, index_word, word_index
 
 def load_config():
-    with open('config.json', 'r') as fp:
+    with open(with_path('config.json'), 'r') as fp:
         config = json.load(fp)
     return (
         config['input_len'],
@@ -68,11 +69,11 @@ def save_model(sess, name='model.ckpt'):
     if not os.path.exists('model'):
         os.makedirs('model')
     saver = tf.train.Saver()
-    saver.save(sess, 'model/' + name)
+    saver.save(sess, with_path('model/' + name))
 
 def load_model(sess, name='model.ckpt'):
     saver = tf.train.Saver()
-    saver.restore(sess, 'model/' + name)
+    saver.restore(sess, with_path('model/' + name))
 
 dim, dictionary, index_word, word_index = load_dictionary()
 input_len, output_len, size, depth, dropout, \

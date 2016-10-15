@@ -13,16 +13,13 @@ from sklearn.utils import shuffle
 import tensorflow as tf
 from tqdm import tqdm
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-os.chdir(current_dir)
-
 try:
     import s2s.data_util as data_util
 except:
     try:
-        import data_util
+        import server.s2s.data_util as data_util
     except:
-        print('Cannot import data_util')
+        print('s2s/test.py cannot import data_util')
         exit(1)
 
 tf.device(data_util.test_device)
