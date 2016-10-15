@@ -13,6 +13,9 @@ import numpy as np
 from sklearn.utils import shuffle
 from tqdm import tqdm
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(current_dir)
+
 EOS = '<eos>'
 UNK = '<unk>'
 PAD = '<pad>'

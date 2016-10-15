@@ -2,6 +2,7 @@
 
 __author__ = 'qhduan@memect.co'
 
+import os
 import sys
 import math
 import time
@@ -12,7 +13,17 @@ from sklearn.utils import shuffle
 import tensorflow as tf
 from tqdm import tqdm
 
-import data_util
+current_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(current_dir)
+
+try:
+    import s2s.data_util as data_util
+except:
+    try:
+        import data_util
+    except:
+        print('Cannot import data_util')
+        exit(1)
 
 tf.device(data_util.test_device)
 

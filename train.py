@@ -15,7 +15,14 @@ from tqdm import tqdm
 current_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(current_dir)
 
-import data_util
+try:
+    import s2s.data_util as data_util
+except:
+    try:
+        import data_util
+    except:
+        print('Cannot import data_util')
+        exit(1)
 
 def main():
 

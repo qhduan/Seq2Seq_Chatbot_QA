@@ -1,3 +1,4 @@
 *.py[cod]
 .ipynb_checkpoints
 model/model.ckpt
+db/conversation.db
