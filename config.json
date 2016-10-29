@@ -3,12 +3,12 @@
     "input_len": 16,
     "output_len": 24,
     "size": 512,
-    "depth": 6,
+    "depth": 4,
     "dropout": 0.8,
-    "batch_size": 128,
+    "batch_size": 512,
     "random_state": 0,
     "learning_rate": 0.0003,
-    "epoch": 5,
+    "epoch": 20,
     "train_device": "/gpu:0",
     "test_device": "/cpu:0"
 }

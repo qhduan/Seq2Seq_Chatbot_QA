@@ -21,7 +21,7 @@ except:
     try:
         import data_util
     except:
-        print('Cannot import data_util')
+        print('''train.py can't import data_util''')
         exit(1)
 
 def main():
@@ -46,7 +46,8 @@ def main():
         outputs,
         decoder_targets,
         decoder_weights,
-        data_util.dim
+        data_util.dim,
+        softmax_loss_function=None
     )
 
     opt = tf.train.AdamOptimizer(

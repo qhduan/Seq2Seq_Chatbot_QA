@@ -17,9 +17,9 @@ try:
     import s2s.data_util as data_util
 except:
     try:
-        import server.s2s.data_util as data_util
+        import data_util
     except:
-        print('s2s/test.py cannot import data_util')
+        print('''test.py can't import data_util''')
         exit(1)
 
 tf.device(data_util.test_device)
@@ -69,8 +69,13 @@ def test_example():
     for x in t:
         test_qa(x)
 
+asks, answers = None, None
+
 def test_db():
-    asks, answers = data_util.read_db('db/conversation.db')
+    global asks
+    global answers
+    if asks is None:
+        asks, answers = data_util.read_db('db/conversation.db')
     for _ in range(20):
         s = random.choice(asks)
         test_qa(s)
@@ -81,6 +86,12 @@ if __name__ == '__main__':
         sentence = sentence.strip()
         if sentence in ('quit', 'exit'):
             break
+        if sentence == 'db':
+            test_db()
+            continue
+        if sentence == 'example':
+            test_example()
+            continue
         if len(sentence) <= 0:
             break
         recall = test_sentence(sentence)
