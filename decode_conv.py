@@ -45,15 +45,15 @@ def valid(a, max_len=0):
             return True
     return False
 
-def insert(a, b):
+def insert(a, b, cur):
     cur.execute("""
     INSERT INTO conversation (ask, answer) VALUES
     ('{}', '{}')
     """.format(a.replace("'", "''"), b.replace("'", "''")))
 
-def insert_if(question, answer, input_len=500, output_len=500):
+def insert_if(question, answer, input_len=500, output_len=500, cur):
     if valid(question, input_len) and valid(answer, output_len):
-        insert(question, answer)
+        insert(question, answer, cur)
         keys[k] = 1
         return 1
     return 0
@@ -85,7 +85,7 @@ def main(file_path):
         b = line
         ask = a
         answer = b
-        inserted += insert_if(ask, answer)
+        inserted += insert_if(ask, answer, cur)
         # 批量提交
         if inserted != 0 and inserted % 50000 == 0:
             conn.commit()
