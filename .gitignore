@@ -1,4 +1,15 @@
+
+__pycache__
+
 *.py[cod]
+
 .ipynb_checkpoints
-model/model.ckpt
-db/conversation.db
+
+model/*
+
+db/*.db
+
+bucket_dbs/*
+
+dgk_shooter_min.conv.zip
+dgk_shooter_min.conv

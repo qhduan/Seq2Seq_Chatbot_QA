@@ -1,7 +1,11 @@
 {
     "__author__": "qhduan@memect.co",
-    "input_len": 16,
-    "output_len": 24,
+    "buckets": [
+        [5, 15],
+        [10, 20],
+        [20, 30],
+        [40, 50]
+    ],
     "size": 512,
     "depth": 4,
     "dropout": 0.8,

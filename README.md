@@ -20,9 +20,7 @@ A Neural Conversational Model
 
 # 依赖
 
-需要安装TensorFlow
-
-其他的一些我没有用pip导出，至少会依赖：
+python3 是的这份代码应该不兼容python2吧
 
 numpy 科学运算
 
@@ -30,55 +28,65 @@ sklearn 科学运算
 
 tqdm 进度条
 
+tensorflow 深度学习
+
 大概也就依赖这些，如果只是测试，装一个cpu版本的TensorFlow就行了，也很快。
 
-如果要训练还是必须要用CUDA，否则肯定超级慢超级慢～～
+如果要训练还是要用CUDA，否则肯定超级慢超级慢～～
 
-项目里有些文件很大，我标了***太大了传不到GitHub***，如果想要完整的数据库和训练好的模型直接测试，提供一个地址：
+# 本包的使用说明
 
-http://pan.baidu.com/s/1o8IYtWe
+本包大体上是用上面提到的官方的translate的demo改的，官方那个是英文到法文的翻译模型
+
+## 第一步
+
+输入：首先从[这里](https://github.com/rustch3n/dgk_lost_conv)下载一份dgk_shooter_min.conv.zip
+
+输出：然后解压出来dgk_shooter_min.conv文件
+
+## 第二步
+
+在***项目录下***执行decode_conv.py脚本
+
+输入：python3 decode_conv.py
+
+输出：会生成一个sqlite3格式的数据库文件在db/conversation.db
+
+## 第三步
+
+在***项目录下***执行data_utils.py脚本
+
+输入：python3 data_utils.py
+
+输出：会生成一个bucket_dbs目录，里面包含了多个sqlite3格式的数据库，这是将数据按照大小分到不同的buckets里面
+
+例如问题ask的长度小于等于5，且，输出答案answer长度小鱼15，就会被放到bucket_5_15_db里面
+
+## 第四步 训练
+
+下面的参数仅仅为了测试，训练次数少，会训练处一个很糟糕的模型，具体参数含义可以参考train.py
+
+输入：python3 train.py --size 128 --num_layers 1 --num_epoch 1 --num_per_epoch 1000
+
+输出：默认在model目录会输出模型文件
+
+## 第五步 测试
+
+输入：python3 train.py --test true
 
 # 项目文件
 
-db/ 数据文件夹
+db/chinese.txt 小学生必须掌握的2500个汉字
 
-dgk_shooter_min.conv 数据，来源 https://github.com/rustch3n/dgk_lost_conv 电影对话 ***太大了传不到GitHub***
+db/gb2312_level1.txt GB2312编码内的一级字库
 
-dgk_shooter_min.conv.7z 上个文件的压缩版，解压了就是上个文件，当然你也可以去原Git找，他那也是压缩包反正……
-
-chinese.txt 小学生必须掌握的2500个汉字
-
-gb2312_level1.txt GB2312编码内的一级字库
-
-gb2312_level2.txt GB2312编码内的二级字库
+db/gb2312_level2.txt GB2312编码内的二级字库
 
 *上面几个汉字文件主要是生成字典用的，我知道一般的办法可能是跑一遍数据库，然后生成词频（字频）之类的，然后自动生成一个词典，不过我就是不想那么做……总觉得那么做感觉不纯洁～～*
 
-decode_conv.ipynb jupyter notebook文件，用来把dgk_shooter_min.conv文件中的对话转换到conversation.db的数据库
-
-conversation.db 上个程序生成的数据库 ***太大了传不到GitHub***
-
-generate_dict.ipynb jupyter notebook文件，用来生成词典，例如2500个小学生必备汉字+英文+标点，这样的词典，我没有用数据库按字频生成词典
-
-dictionary.json 上个程序生成的词典
-
-model/ 模型文件夹，保存生成好的模型
-
-model.ckpt 这个文件和下面文件都是TensorFlow的模型文件，或者说session文件？ ***太大了传不到GitHub***
-
-model.ckpt.meta ***不算太大，但是上个都没传我这个还传它做毛啊也十几兆呢***
-
-./ 根目录
-
-config.json 配置文件，配置模型超参
-
-data_util.py 一个辅助库，里面的函数是：用来处理数据啦，产生模型啦，各种我懒得写注释的小破函数啦
-
-train.py 训练程序，需要用到上面两个文件，还有字典文件和数据库文件
-
-test.py 测试文件，运行之后会提示你输入
-
 # 测试结果
+
+**不同的参数和数据集，结果都可能变化很大，仅供参考**
 
 说：你好
 

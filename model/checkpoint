@@ -1,2 +1,2 @@
-model_checkpoint_path: "/opt/Work/s2s/model/model.ckpt"
-all_model_checkpoint_paths: "/opt/Work/s2s/model/model.ckpt"
+model_checkpoint_path: "model"
+all_model_checkpoint_paths: "model"
