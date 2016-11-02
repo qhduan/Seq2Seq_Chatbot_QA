@@ -58,8 +58,8 @@ def insert_if(question, answer, input_len=500, output_len=500):
         return 1
     return 0
 
-def main():
-    lines = file_lines()
+def main(file_path):
+    lines = file_lines(file_path)
 
     print('一共读取 %d 行数据' % len(lines))
 
@@ -98,4 +98,4 @@ if __name__ == '__main__':
     if not os.path.exists(file_path):
         print('文件 {} 不存在'.format(file_path))
     else:
-        main()
+        main(file_path)
