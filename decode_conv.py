@@ -51,10 +51,9 @@ def insert(a, b, cur):
     ('{}', '{}')
     """.format(a.replace("'", "''"), b.replace("'", "''")))
 
-def insert_if(question, answer, input_len=500, output_len=500, cur):
+def insert_if(question, answer, cur, input_len=500, output_len=500):
     if valid(question, input_len) and valid(answer, output_len):
         insert(question, answer, cur)
-        keys[k] = 1
         return 1
     return 0
 
@@ -79,7 +78,7 @@ def main(file_path):
     b = ''
     inserted = 0
 
-    for index, line in tqdm(enumerate(lines)):
+    for index, line in tqdm(enumerate(lines), total=len(lines)):
         words.update(Counter(line))
         a = b
         b = line
