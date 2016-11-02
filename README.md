@@ -38,6 +38,8 @@ tensorflow 深度学习
 
 本包大体上是用上面提到的官方的translate的demo改的，官方那个是英文到法文的翻译模型
 
+下面的步骤看似很复杂……其实很简单
+
 ## 第一步
 
 输入：首先从[这里](https://github.com/rustch3n/dgk_lost_conv)下载一份dgk_shooter_min.conv.zip
@@ -60,19 +62,35 @@ tensorflow 深度学习
 
 输出：会生成一个bucket_dbs目录，里面包含了多个sqlite3格式的数据库，这是将数据按照大小分到不同的buckets里面
 
-例如问题ask的长度小于等于5，且，输出答案answer长度小鱼15，就会被放到bucket_5_15_db里面
+例如问题ask的长度小于等于5，并且，输出答案answer长度小于15，就会被放到bucket_5_15_db里面
 
 ## 第四步 训练
 
-下面的参数仅仅为了测试，训练次数少，会训练处一个很糟糕的模型，具体参数含义可以参考train.py
+下面的参数仅仅为了测试，训练次数不多，不会训练出一个好的模型
 
-输入：python3 train.py --size 128 --num_layers 1 --num_epoch 1 --num_per_epoch 1000
+size: 每层LSTM神经元数量
 
-输出：默认在model目录会输出模型文件
+num_layers: 层数
+
+num_epoch: 训练多少轮（回合）
+
+num_per_epoch: 每轮（回合）训练多少样本
+
+具体参数含义可以参考train.py
+
+输入：python3 train.py --size 128 --num_layers 2 --num_epoch 5 --num_per_epoch 10000
+
+输出：默认在model目录会输出模型文件，上面的参数大概会生成230MB的模型
 
 ## 第五步 测试
 
-输入：python3 train.py --test true
+下面的测试参数应该和上面的训练参数一样，只是最后加了--test true 进入测试模式
+
+输入：python3 train.py --size 128 --num_layers 2 --num_epoch 5 --num_per_epoch 10000 --test true
+
+输出：在命令行输入问题，机器人就会回答哦！但是上面这个模型会回答的很糟糕哦！
+
+如果 --size 512 --num_layers 2 --num_epoch 5 --num_per_epoch 1000000 基本上就可以训练出会说点人话的机器人了
 
 # 项目文件
 
@@ -83,6 +101,8 @@ db/gb2312_level1.txt GB2312编码内的一级字库
 db/gb2312_level2.txt GB2312编码内的二级字库
 
 *上面几个汉字文件主要是生成字典用的，我知道一般的办法可能是跑一遍数据库，然后生成词频（字频）之类的，然后自动生成一个词典，不过我就是不想那么做……总觉得那么做感觉不纯洁～～*
+
+db/dictionary.json 字典
 
 # 测试结果
 

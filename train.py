@@ -180,6 +180,11 @@ def train():
         model.saver.save(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name))
 
 def test():
+    class TestBucket(object):
+        def __init__(self, sentence):
+            self.sentence = sentence
+        def random(self):
+            return sentence, ''
     with tf.Session() as sess:
         #　构建模型
         model = create_model(sess, True)
@@ -196,7 +201,7 @@ def test():
                 if buckets[b][0] > len(sentence)
             ])
             encoder_inputs, decoder_inputs, decoder_weights = model.get_batch(
-                {bucket_id: [(sentence, '')]},
+                {bucket_id: TestBucket(sentence)},
                 bucket_id
             )
             _, _, output_logits = model.step(
