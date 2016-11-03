@@ -112,7 +112,6 @@ def train():
         print('bucket {} 中有数据 {} 条'.format(i, bucket_size))
     total_size = sum(bucket_sizes)
     print('共有数据 {} 条'.format(total_size))
-    np.random.seed(0)
     # 开始建模与训练
     with tf.Session() as sess:
         #　构建模型
@@ -226,5 +225,6 @@ def main(_):
         train()
 
 if __name__ == '__main__':
+    np.random.seed(0)
     tf.set_random_seed(0)
     tf.app.run()

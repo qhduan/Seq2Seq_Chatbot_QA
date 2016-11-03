@@ -142,9 +142,10 @@ class S2SModel(object):
         # 理论上decoder inputs和decoder target都是n位
         # 但是实际上decoder inputs分配了n+1位空间
         # 不过inputs是第[0, n)，而target是[1, n+1)，刚好错开一位
-        # 最后这一位是没东西的，所以要补齐最后一位，填充0
+        # 最后这一位是没东西的，所以要补齐最后一位，填充
         last_target = self.decoder_inputs[decoder_size].name
-        input_feed[last_target] = np.zeros([self.batch_size], dtype=np.int32)
+        input_feed[last_target] = data_utils.EOS_ID
+        # input_feed[last_target] = np.zeros([self.batch_size], dtype=np.int32)
 
         if not forward_only:
             output_feed = [
@@ -199,7 +200,7 @@ class S2SModel(object):
             for j in range(self.batch_size):
                 if i < decoder_size - 1:
                     target = decoder_inputs[j][i + 1]
-                if i == decoder_size -1 or target == data_utils.PAD:
+                if i == decoder_size - 1 or target == data_utils.PAD_ID:
                     batch_weight[j] = 0.0
             batch_weights.append(batch_weight)
         return batch_encoder_inputs, batch_decoder_inputs, batch_weights

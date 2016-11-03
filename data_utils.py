@@ -89,17 +89,13 @@ class BucketData(object):
         self.size = self.cur.execute(sql).fetchall()[0][0]
 
     def random(self):
-        sql = '''
-        SELECT ask, answer FROM conversation
-        WHERE ROWID = (ABS(RANDOM()) % (
-            SELECT (SELECT MAX(ROWID) FROM conversation) + 1
-        ));
-        '''
-        sql = '''
-        SELECT ask, answer FROM conversation
-        WHERE ROWID = (ABS(RANDOM()) % ({} + 1));
-        '''.format(self.size)
         while True:
+            # 选择一个[1, MAX(ROWID)]中的整数，读取这一行
+            rowid = np.random.randint(1, self.size + 1)
+            sql = '''
+            SELECT ask, answer FROM conversation
+            WHERE ROWID = {};
+            '''.format(rowid)
             ret = self.cur.execute(sql).fetchall()
             if len(ret) == 1:
                 ask, answer = ret[0]
