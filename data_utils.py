@@ -135,7 +135,7 @@ def generate_bucket_dbs(
         input_dir,
         output_dir,
         buckets,
-        tolerate_unk=2
+        tolerate_unk=1
     ):
     pool = {}
     def _get_conn(key):
@@ -205,7 +205,7 @@ def generate_bucket_dbs(
 
 if __name__ == '__main__':
     print('generate bucket dbs')
-    all_inserted = generate_bucket_dbs('./db', './bucket_dbs', buckets, 2)
+    all_inserted = generate_bucket_dbs('./db', './bucket_dbs', buckets, 1)
     for key, inserted_count in all_inserted.items():
         print(key)
         print(inserted_count)

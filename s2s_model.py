@@ -174,12 +174,15 @@ class S2SModel(object):
             encoder_input = data_utils.sentence_indice(encoder_input)
             decoder_input = data_utils.sentence_indice(decoder_input)
             # Encoder
-            encoder_pad = [data_utils.PAD_ID] * (encoder_size - len(encoder_input))
+            encoder_pad = [data_utils.PAD_ID] * (
+                encoder_size - len(encoder_input)
+            )
             encoder_inputs.append(list(reversed(encoder_input + encoder_pad)))
             # Decoder
-            decoder_pad_size = decoder_size - len(decoder_input) - 1
+            decoder_pad_size = decoder_size - len(decoder_input) - 2
             decoder_inputs.append(
                 [data_utils.GO_ID] + decoder_input +
+                [data_utils.EOS_ID] +
                 [data_utils.PAD_ID] * decoder_pad_size
             )
         batch_encoder_inputs, batch_decoder_inputs, batch_weights = [], [], []
