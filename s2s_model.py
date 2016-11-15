@@ -17,6 +17,7 @@ class S2SModel(object):
                 max_gradient_norm,
                 batch_size,
                 learning_rate,
+                num_samples,
                 forward_only=False,
                 dtype=tf.float32):
         # init member variales
@@ -31,8 +32,42 @@ class S2SModel(object):
         cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=dropout)
         cell = tf.nn.rnn_cell.MultiRNNCell([cell] * num_layers)
 
+        output_projection = None
+        softmax_loss_function = None
+
+        # 如果vocabulary太大，我们还是按照vocabulary来sample的话，内存会爆
+        if num_samples > 0 and num_samples < self.target_vocab_size:
+            print('开启投影：{}'.format(num_samples))
+            w_t = tf.get_variable(
+                "proj_w",
+                [self.target_vocab_size, size],
+                dtype=dtype
+            )
+            w = tf.transpose(w_t)
+            b = tf.get_variable(
+                "proj_b",
+                [self.target_vocab_size],
+                dtype=dtype
+            )
+            output_projection = (w, b)
+
+            def sampled_loss(inputs, labels):
+                labels = tf.reshape(labels, [-1, 1])
+                # 因为选项有选fp16的训练，这里同意转换为fp32
+                local_w_t = tf.cast(w_t, tf.float32)
+                local_b = tf.cast(b, tf.float32)
+                local_inputs = tf.cast(inputs, tf.float32)
+                return tf.cast(
+                    tf.nn.sampled_softmax_loss(
+                        local_w_t, local_b, local_inputs, labels,
+                        num_samples, self.target_vocab_size
+                    ),
+                    dtype
+                )
+            softmax_loss_function = sampled_loss
+
         # seq2seq_f
-        def seq2seq_f(encoder_inputs, decoder_inputs):
+        def seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
             return tf.nn.seq2seq.embedding_attention_seq2seq(
                 encoder_inputs,
                 decoder_inputs,
@@ -40,7 +75,8 @@ class S2SModel(object):
                 num_encoder_symbols=source_vocab_size,
                 num_decoder_symbols=target_vocab_size,
                 embedding_size=size,
-                feed_previous=forward_only,
+                output_projection=output_projection,
+                feed_previous=do_decode,
                 dtype=dtype
             )
 
@@ -73,14 +109,35 @@ class S2SModel(object):
             self.decoder_inputs[i + 1] for i in range(buckets[-1][1])
         ]
 
-        self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
-            self.encoder_inputs,
-            self.decoder_inputs,
-            targets,
-            self.decoder_weights,
-            buckets,
-            seq2seq_f
-        )
+        if forward_only:
+            self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
+                self.encoder_inputs,
+                self.decoder_inputs,
+                targets,
+                self.decoder_weights,
+                buckets,
+                lambda x, y: seq2seq_f(x, y, True),
+                softmax_loss_function=softmax_loss_function
+            )
+            if output_projection is not None:
+                for b in range(len(buckets)):
+                    self.outputs[b] = [
+                        tf.matmul(
+                            output,
+                            output_projection[0]
+                        ) + output_projection[1]
+                        for output in self.outputs[b]
+                    ]
+        else:
+            self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
+                self.encoder_inputs,
+                self.decoder_inputs,
+                targets,
+                self.decoder_weights,
+                buckets,
+                lambda x, y: seq2seq_f(x, y, False),
+                softmax_loss_function=softmax_loss_function
+            )
 
         params = tf.trainable_variables()
         opt = tf.train.AdamOptimizer(

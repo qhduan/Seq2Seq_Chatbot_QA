@@ -49,6 +49,11 @@ tf.app.flags.DEFINE_integer(
     '训练几轮'
 )
 tf.app.flags.DEFINE_integer(
+    'num_samples',
+    2048,
+    '分批softmax的样本量'
+)
+tf.app.flags.DEFINE_integer(
     'num_per_epoch',
     10000,
     '每轮训练多少随机样本'
@@ -95,6 +100,7 @@ def create_model(session, forward_only):
         FLAGS.max_gradient_norm,
         FLAGS.batch_size,
         FLAGS.learning_rate,
+        FLAGS.num_samples,
         forward_only,
         dtype
     )

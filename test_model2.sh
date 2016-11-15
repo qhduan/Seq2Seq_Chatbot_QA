@@ -6,4 +6,5 @@ python3 train.py \
 --num_epoch 5 \
 --batch_size 512 \
 --num_per_epoch 100000 \
---model_dir ./model/model1
+--model_dir ./model/model2 \
+--test true
