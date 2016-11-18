@@ -18,6 +18,8 @@ class S2SModel(object):
                 batch_size,
                 learning_rate,
                 num_samples,
+                mutual_info,
+                mutual_info_lambda,
                 forward_only=False,
                 dtype=tf.float32):
         # init member variales
@@ -26,6 +28,7 @@ class S2SModel(object):
         self.buckets = buckets
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.mutual_info = mutual_info
 
         # LSTM cells
         cell = tf.nn.rnn_cell.BasicLSTMCell(size)
@@ -84,6 +87,10 @@ class S2SModel(object):
         self.encoder_inputs = []
         self.decoder_inputs = []
         self.decoder_weights = []
+        # inputs
+        self.encoder_inputs_in = []
+        self.decoder_inputs_in = []
+        self.decoder_weights_in = []
 
         # buckets中的最后一个是最大的（即第“-1”个）
         for i in range(buckets[-1][0]):
@@ -105,9 +112,37 @@ class S2SModel(object):
                 name='decoder_weight_{}'.format(i)
             ))
 
+        # 使用互信息
+        if mutual_info:
+            # buckets中的最后一个是最大的（即第“-1”个）
+            for i in range(buckets[-1][0]):
+                self.encoder_inputs_in.append(tf.placeholder(
+                    tf.int32,
+                    shape=[None],
+                    name='encoder_input_{}'.format(i)
+                ))
+            # 输出比输入大 1，这是为了保证下面的targets可以向左shift 1位
+            for i in range(buckets[-1][1] + 1):
+                self.decoder_inputs_in.append(tf.placeholder(
+                    tf.int32,
+                    shape=[None],
+                    name='decoder_input_{}'.format(i)
+                ))
+                self.decoder_weights_in.append(tf.placeholder(
+                    dtype,
+                    shape=[None],
+                    name='decoder_weight_{}'.format(i)
+                ))
+
         targets = [
             self.decoder_inputs[i + 1] for i in range(buckets[-1][1])
         ]
+
+        # 使用互信息
+        if mutual_info:
+            targets_in = [
+                self.decoder_inputs_in[i + 1] for i in range(buckets[-1][1])
+            ]
 
         if forward_only:
             self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
@@ -138,6 +173,21 @@ class S2SModel(object):
                 lambda x, y: seq2seq_f(x, y, False),
                 softmax_loss_function=softmax_loss_function
             )
+            if mutual_info and mutual_info_lambda > 0.0:
+                tf.get_variable_scope().reuse_variables()
+                output_in, losses_in = tf.nn.seq2seq.model_with_buckets(
+                    self.encoder_inputs_in,
+                    self.decoder_inputs_in,
+                    targets_in,
+                    self.decoder_weights_in,
+                    buckets,
+                    lambda x, y: seq2seq_f(x, y, False),
+                    softmax_loss_function=softmax_loss_function
+                )
+                self.losses = [
+                    self.losses[0] * (1.0 - mutual_info_lambda),
+                    losses_in[0] * mutual_info_lambda
+                ]
 
         params = tf.trainable_variables()
         opt = tf.train.AdamOptimizer(
@@ -147,7 +197,7 @@ class S2SModel(object):
         if not forward_only:
             self.gradient_norms = []
             self.updates = []
-            for output, loss in zip(self.outputs, self.losses):
+            for loss in self.losses:
                 gradients = tf.gradients(loss, params)
                 clipped_gradients, norm = tf.clip_by_global_norm(
                     gradients,
@@ -169,6 +219,9 @@ class S2SModel(object):
         encoder_inputs,
         decoder_inputs,
         decoder_weights,
+        encoder_inputs_in,
+        decoder_inputs_in,
+        decoder_weights_in,
         bucket_id,
         forward_only
     ):
@@ -196,12 +249,25 @@ class S2SModel(object):
             input_feed[self.decoder_inputs[i].name] = decoder_inputs[i]
             input_feed[self.decoder_weights[i].name] = decoder_weights[i]
 
+        if self.mutual_info:
+            # invert
+            for i in range(decoder_size):
+                input_feed[self.encoder_inputs_in[i].name] = encoder_inputs_in[i]
+            for i in range(encoder_size):
+                input_feed[self.decoder_inputs_in[i].name] = decoder_inputs_in[i]
+                input_feed[self.decoder_weights_in[i].name] = decoder_weights_in[i]
+
         # 理论上decoder inputs和decoder target都是n位
         # 但是实际上decoder inputs分配了n+1位空间
         # 不过inputs是第[0, n)，而target是[1, n+1)，刚好错开一位
         # 最后这一位是没东西的，所以要补齐最后一位，填充0
         last_target = self.decoder_inputs[decoder_size].name
         input_feed[last_target] = np.zeros([self.batch_size], dtype=np.int32)
+
+        if self.mutual_info:
+            # invert
+            last_target_in = self.decoder_inputs_in[encoder_size].name
+            input_feed[last_target_in] = np.zeros([self.batch_size], dtype=np.int32)
 
         if not forward_only:
             output_feed = [
@@ -221,13 +287,23 @@ class S2SModel(object):
         else:
             return None, outputs[0], outputs[1:]
 
-    def get_batch(self, bucket_dbs, bucket_id):
-        encoder_size, decoder_size = self.buckets[bucket_id]
+    def get_batch_data(self, bucket_dbs, bucket_id):
+        data = []
+        data_in = []
         bucket_db = bucket_dbs[bucket_id]
-        encoder_inputs, decoder_inputs = [], []
         for _ in range(self.batch_size):
+            ask, answer = bucket_db.random()
+            data.append((ask, answer))
+            data_in.append((answer, ask))
+        return data, data_in
+
+    def get_batch(self, bucket_dbs, bucket_id, data):
+        encoder_size, decoder_size = self.buckets[bucket_id]
+        # bucket_db = bucket_dbs[bucket_id]
+        encoder_inputs, decoder_inputs = [], []
+        for encoder_input, decoder_input in data:
             # encoder_input, decoder_input = random.choice(data[bucket_id])
-            encoder_input, decoder_input = bucket_db.random()
+            # encoder_input, decoder_input = bucket_db.random()
             encoder_input = data_utils.sentence_indice(encoder_input)
             decoder_input = data_utils.sentence_indice(decoder_input)
             # Encoder

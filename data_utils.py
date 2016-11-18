@@ -27,10 +27,8 @@ GO = '<go>'
 # 我一般是逗号放到句子后面的……
 # 不过这样比较方便屏蔽某一行，如果是JS就不用这样了，因为JS的JSON语法比较松，允许多余逗号
 buckets = [
-    (5, 15)
-    , (10, 20)
-    , (15, 25)
-    , (20, 30)
+    (10, 10)
+    , (20, 20)
 ]
 
 def time(s):
@@ -89,6 +87,18 @@ class BucketData(object):
         self.cur = self.conn.cursor()
         sql = '''SELECT MAX(ROWID) FROM conversation;'''
         self.size = self.cur.execute(sql).fetchall()[0][0]
+
+    def all_answers(self, ask):
+        """找出所有数据库中符合ask的answer
+        """
+        sql = '''
+        SELECT answer FROM conversation
+        WHERE ask = '{}';
+        '''.format(ask.replace("'", "''"))
+        ret = []
+        for s in self.cur.execute(sql):
+            ret.append(s[0])
+        return list(set(ret))
 
     def random(self):
         while True:
