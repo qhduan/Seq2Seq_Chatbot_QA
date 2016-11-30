@@ -3,16 +3,16 @@
 __author__ = 'qhduan@memect.co'
 
 import os
+import sys
 import json
 import math
+import shutil
 import pickle
 import sqlite3
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 import numpy as np
 from tqdm import tqdm
-import tensorflow as tf
-from sklearn.utils import shuffle
 
 def with_path(p):
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,15 +59,19 @@ def load_dictionary():
         dim = len(dictionary)
     return dim, dictionary, index_word, word_index
 
+"""
 def save_model(sess, name='model.ckpt'):
+    import tensorflow as tf
     if not os.path.exists('model'):
         os.makedirs('model')
     saver = tf.train.Saver()
     saver.save(sess, with_path('model/' + name))
 
 def load_model(sess, name='model.ckpt'):
+    import tensorflow as tf
     saver = tf.train.Saver()
     saver.restore(sess, with_path('model/' + name))
+"""
 
 dim, dictionary, index_word, word_index = load_dictionary()
 
@@ -89,6 +93,18 @@ class BucketData(object):
         self.cur = self.conn.cursor()
         sql = '''SELECT MAX(ROWID) FROM conversation;'''
         self.size = self.cur.execute(sql).fetchall()[0][0]
+
+    def all_answers(self, ask):
+        """找出所有数据库中符合ask的answer
+        """
+        sql = '''
+        SELECT answer FROM conversation
+        WHERE ask = '{}';
+        '''.format(ask.replace("'", "''"))
+        ret = []
+        for s in self.cur.execute(sql):
+            ret.append(s[0])
+        return list(set(ret))
 
     def random(self):
         while True:
@@ -140,6 +156,7 @@ def generate_bucket_dbs(
         tolerate_unk=1
     ):
     pool = {}
+    word_count = Counter()
     def _get_conn(key):
         if key not in pool:
             if not os.path.exists(output_dir):
@@ -198,16 +215,58 @@ def generate_bucket_dbs(
                 for i in range(len(buckets)):
                     encoder_size, decoder_size = buckets[i]
                     if len(ask) <= encoder_size and len(answer) < decoder_size:
+                        word_count.update(list(ask))
+                        word_count.update(list(answer))
                         wait_insert.append((encoder_size, decoder_size, ask, answer))
-                        if len(wait_insert) > 1000000:
+                        if len(wait_insert) > 10000000:
                             wait_insert = _insert(wait_insert)
                         break
+    word_count_arr = [(k, v) for k, v in word_count.items()]
+    word_count_arr = sorted(word_count_arr, key=lambda x: x[1], reverse=True)
     wait_insert = _insert(wait_insert)
-    return all_inserted
+    return all_inserted, word_count_arr
 
 if __name__ == '__main__':
     print('generate bucket dbs')
-    all_inserted = generate_bucket_dbs('./db', './bucket_dbs', buckets, 1)
+    # 来源数据库目录
+    db_path = ''
+    if len(sys.argv) >= 2 and os.path.exists(sys.argv[1]):
+        db_path = sys.argv[1]
+        if not os.path.isdir(db_path):
+            print('invalid db source path, not dir')
+            exit(1)
+    elif os.path.exists('./db'):
+        db_path = './db'
+    else:
+        print('invalid db source path')
+        exit(1)
+
+    # 输出目录
+    target_path = './bucket_dbs'
+    # 不存在就建
+    if not os.path.exists(target_path):
+        os.makedirs(target_path)
+    elif os.path.exists(target_path) and not os.path.isdir(target_path):
+        print('invalid target path, exists but not dir')
+        exit(1)
+    elif os.path.exists(target_path) and os.path.isdir(target_path):
+        shutil.rmtree(target_path)
+        os.makedirs(target_path)
+
+    # 生成
+    all_inserted, word_count_arr = generate_bucket_dbs(
+        db_path,
+        target_path,
+        buckets,
+        1
+    )
+    # 导出字典
+    # print('一共找到{}个词'.format(len(word_count_arr)))
+    # with open('dictionary_detail.json', 'w') as fp:
+    #     json.dump(word_count_arr, fp, indent=4, ensure_ascii=False)
+    # with open('dictionary.json', 'w') as fp:
+    #     json.dump([x for x, _ in word_count_arr], fp, indent=4, ensure_ascii=False)
+    # 输出词库状况
     for key, inserted_count in all_inserted.items():
         print(key)
         print(inserted_count)

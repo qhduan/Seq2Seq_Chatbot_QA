@@ -50,7 +50,7 @@ tf.app.flags.DEFINE_integer(
 )
 tf.app.flags.DEFINE_integer(
     'num_samples',
-    2048,
+    512,
     '分批softmax的样本量'
 )
 tf.app.flags.DEFINE_integer(
@@ -77,6 +77,11 @@ tf.app.flags.DEFINE_boolean(
     'use_fp16',
     False,
     '是否使用16位浮点数（默认32位）'
+)
+tf.app.flags.DEFINE_integer(
+    'bleu',
+    -1,
+    '是否测试bleu'
 )
 tf.app.flags.DEFINE_boolean(
     'test',
@@ -149,9 +154,14 @@ def train():
                     i for i in range(len(buckets_scale))
                     if buckets_scale[i] > random_number
                 ])
-                encoder_inputs, decoder_inputs, decoder_weights = model.get_batch(
+                data, data_in = model.get_batch_data(
                     bucket_dbs,
                     bucket_id
+                )
+                encoder_inputs, decoder_inputs, decoder_weights = model.get_batch(
+                    bucket_dbs,
+                    bucket_id,
+                    data
                 )
                 _, step_loss, output = model.step(
                     sess,
@@ -184,6 +194,77 @@ def train():
             os.makedirs(FLAGS.model_dir)
         model.saver.save(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name))
 
+
+def test_bleu(count):
+    """测试bleu"""
+    from nltk.translate.bleu_score import sentence_bleu
+    from tqdm import tqdm
+    # 准备数据
+    print('准备数据')
+    bucket_dbs = data_utils.read_bucket_dbs(FLAGS.buckets_dir)
+    bucket_sizes = []
+    for i in range(len(buckets)):
+        bucket_size = bucket_dbs[i].size
+        bucket_sizes.append(bucket_size)
+        print('bucket {} 中有数据 {} 条'.format(i, bucket_size))
+    total_size = sum(bucket_sizes)
+    print('共有数据 {} 条'.format(total_size))
+    # bleu设置0的话，默认对所有样本采样
+    if count <= 0:
+        count = total_size
+    buckets_scale = [
+        sum(bucket_sizes[:i + 1]) / total_size
+        for i in range(len(bucket_sizes))
+    ]
+    with tf.Session() as sess:
+        #　构建模型
+        model = create_model(sess, True)
+        model.batch_size = 1
+        # 初始化变量
+        sess.run(tf.initialize_all_variables())
+        model.saver.restore(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name))
+
+        total_score = 0.0
+        for i in tqdm(range(count)):
+            # 选择一个要训练的bucket
+            random_number = np.random.random_sample()
+            bucket_id = min([
+                i for i in range(len(buckets_scale))
+                if buckets_scale[i] > random_number
+            ])
+            data, _ = model.get_batch_data(
+                bucket_dbs,
+                bucket_id
+            )
+            encoder_inputs, decoder_inputs, decoder_weights = model.get_batch(
+                bucket_dbs,
+                bucket_id,
+                data
+            )
+            _, _, output_logits = model.step(
+                sess,
+                encoder_inputs,
+                decoder_inputs,
+                decoder_weights,
+                bucket_id,
+                True
+            )
+            outputs = [int(np.argmax(logit, axis=1)) for logit in output_logits]
+            ask, _ = data[0]
+            all_answers = bucket_dbs[bucket_id].all_answers(ask)
+            ret = data_utils.indice_sentence(outputs)
+            if not ret:
+                continue
+            references = [list(x) for x in all_answers]
+            score = sentence_bleu(
+                references,
+                list(ret),
+                weights=(1.0,)
+            )
+            total_score += score
+        print('BLUE: {:.2f} in {} samples'.format(total_score / count * 10, count))
+
+
 def test():
     class TestBucket(object):
         def __init__(self, sentence):
@@ -205,9 +286,14 @@ def test():
                 b for b in range(len(buckets))
                 if buckets[b][0] > len(sentence)
             ])
-            encoder_inputs, decoder_inputs, decoder_weights = model.get_batch(
+            data, _ = model.get_batch_data(
                 {bucket_id: TestBucket(sentence)},
                 bucket_id
+            )
+            encoder_inputs, decoder_inputs, decoder_weights = model.get_batch(
+                {bucket_id: TestBucket(sentence)},
+                bucket_id,
+                data
             )
             _, _, output_logits = model.step(
                 sess,
@@ -225,7 +311,9 @@ def test():
             sentence = sys.stdin.readline()
 
 def main(_):
-    if FLAGS.test:
+    if FLAGS.bleu > -1:
+        test_bleu(FLAGS.bleu)
+    elif FLAGS.test:
         test()
     else:
         train()

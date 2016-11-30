@@ -221,13 +221,23 @@ class S2SModel(object):
         else:
             return None, outputs[0], outputs[1:]
 
-    def get_batch(self, bucket_dbs, bucket_id):
-        encoder_size, decoder_size = self.buckets[bucket_id]
+    def get_batch_data(self, bucket_dbs, bucket_id):
+        data = []
+        data_in = []
         bucket_db = bucket_dbs[bucket_id]
-        encoder_inputs, decoder_inputs = [], []
         for _ in range(self.batch_size):
+            ask, answer = bucket_db.random()
+            data.append((ask, answer))
+            data_in.append((answer, ask))
+        return data, data_in
+
+    def get_batch(self, bucket_dbs, bucket_id, data):
+        encoder_size, decoder_size = self.buckets[bucket_id]
+        # bucket_db = bucket_dbs[bucket_id]
+        encoder_inputs, decoder_inputs = [], []
+        for encoder_input, decoder_input in data:
             # encoder_input, decoder_input = random.choice(data[bucket_id])
-            encoder_input, decoder_input = bucket_db.random()
+            # encoder_input, decoder_input = bucket_db.random()
             encoder_input = data_utils.sentence_indice(encoder_input)
             decoder_input = data_utils.sentence_indice(decoder_input)
             # Encoder
