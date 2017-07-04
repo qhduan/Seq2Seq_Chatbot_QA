@@ -1,5 +1,7 @@
 
+import pdb
 import random
+import copy
 
 import numpy as np
 import tensorflow as tf
@@ -28,9 +30,9 @@ class S2SModel(object):
         self.learning_rate = learning_rate
 
         # LSTM cells
-        cell = tf.nn.rnn_cell.BasicLSTMCell(size)
-        cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=dropout)
-        cell = tf.nn.rnn_cell.MultiRNNCell([cell] * num_layers)
+        cell = tf.contrib.rnn.BasicLSTMCell(size)
+        cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=dropout)
+        cell = tf.contrib.rnn.MultiRNNCell([cell] * num_layers)
 
         output_projection = None
         softmax_loss_function = None
@@ -51,16 +53,20 @@ class S2SModel(object):
             )
             output_projection = (w, b)
 
-            def sampled_loss(inputs, labels):
+            def sampled_loss(labels, logits):
                 labels = tf.reshape(labels, [-1, 1])
                 # 因为选项有选fp16的训练，这里同意转换为fp32
                 local_w_t = tf.cast(w_t, tf.float32)
                 local_b = tf.cast(b, tf.float32)
-                local_inputs = tf.cast(inputs, tf.float32)
+                local_inputs = tf.cast(logits, tf.float32)
                 return tf.cast(
                     tf.nn.sampled_softmax_loss(
-                        local_w_t, local_b, local_inputs, labels,
-                        num_samples, self.target_vocab_size
+                        weights=local_w_t,
+                        biases=local_b,
+                        labels=labels,
+                        inputs=local_inputs,
+                        num_sampled=num_samples,
+                        num_classes=self.target_vocab_size
                     ),
                     dtype
                 )
@@ -68,10 +74,11 @@ class S2SModel(object):
 
         # seq2seq_f
         def seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
-            return tf.nn.seq2seq.embedding_attention_seq2seq(
+            tmp_cell = copy.deepcopy(cell)
+            return tf.contrib.legacy_seq2seq.embedding_attention_seq2seq(
                 encoder_inputs,
                 decoder_inputs,
-                cell,
+                tmp_cell,
                 num_encoder_symbols=source_vocab_size,
                 num_decoder_symbols=target_vocab_size,
                 embedding_size=size,
@@ -110,7 +117,7 @@ class S2SModel(object):
         ]
 
         if forward_only:
-            self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
+            self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
                 self.encoder_inputs,
                 self.decoder_inputs,
                 targets,
@@ -129,7 +136,7 @@ class S2SModel(object):
                         for output in self.outputs[b]
                     ]
         else:
-            self.outputs, self.losses = tf.nn.seq2seq.model_with_buckets(
+            self.outputs, self.losses = tf.contrib.legacy_seq2seq.model_with_buckets(
                 self.encoder_inputs,
                 self.decoder_inputs,
                 targets,
