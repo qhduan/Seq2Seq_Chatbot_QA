@@ -49,7 +49,7 @@ def time(s):
     return ret
 
 def load_dictionary():
-    with open(with_path(DICTIONARY_PATH), 'r') as fp:
+    with open(with_path(DICTIONARY_PATH), 'r', encoding='UTF-8') as fp:
         dictionary = [EOS, UNK, PAD, GO] + json.load(fp)
         index_word = OrderedDict()
         word_index = OrderedDict()
