@@ -114,7 +114,10 @@ def create_model(session, forward_only):
 def train():
     """训练模型"""
     # 准备数据
+    print("train mode")
     print('准备数据')
+    if not os.path.exists(FLAGS.model_dir):
+        os.makedirs(FLAGS.model_dir)
     bucket_dbs = data_utils.read_bucket_dbs(FLAGS.buckets_dir)
     bucket_sizes = []
     for i in range(len(buckets)):
@@ -129,6 +132,13 @@ def train():
         model = create_model(sess, False)
         # 初始化变量
         sess.run(tf.initialize_all_variables())
+        ckpt = tf.train.get_checkpoint_state(FLAGS.model_dir)
+        print("ckpt path : ", ckpt.model_checkpoint_path)
+        if ckpt != None:
+            print("load old model : ", ckpt.model_checkpoint_path)
+            model.saver.restore(sess, ckpt.model_checkpoint_path)
+        else:
+            print("not exist old model")
         buckets_scale = [
             sum(bucket_sizes[:i + 1]) / total_size
             for i in range(len(bucket_sizes))
@@ -187,16 +197,18 @@ def train():
                 ))
                 sys.stdout.flush()
                 if epoch_trained >= FLAGS.num_per_epoch:
+                    model.saver.save(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name), global_step=epoch_index)
                     break
             print('\n')
 
-        if not os.path.exists(FLAGS.model_dir):
-            os.makedirs(FLAGS.model_dir)
-        model.saver.save(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name))
+        #if not os.path.exists(FLAGS.model_dir):
+        #    os.makedirs(FLAGS.model_dir)
+        #model.saver.save(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name))
 
 
 def test_bleu(count):
     """测试bleu"""
+    print("bleu test mode")
     from nltk.translate.bleu_score import sentence_bleu
     from tqdm import tqdm
     # 准备数据
@@ -266,6 +278,7 @@ def test_bleu(count):
 
 
 def test():
+    print("test mode")
     class TestBucket(object):
         def __init__(self, sentence):
             self.sentence = sentence
@@ -278,9 +291,12 @@ def test():
         # 初始化变量
         sess.run(tf.initialize_all_variables())
         model.saver.restore(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name))
-        sys.stdout.write("> ")
+        print("Input 'exit()' to exit test mode!")
+        sys.stdout.write("me > ")
         sys.stdout.flush()
         sentence = sys.stdin.readline()
+        if "exit()" in sentence:
+            sentence = False
         while sentence:
             bucket_id = min([
                 b for b in range(len(buckets))
@@ -305,10 +321,12 @@ def test():
             )
             outputs = [int(np.argmax(logit, axis=1)) for logit in output_logits]
             ret = data_utils.indice_sentence(outputs)
-            print(ret)
-            print("> ", end="")
+            print("AI >", ret)
+            print("me > ", end="")
             sys.stdout.flush()
             sentence = sys.stdin.readline()
+            if "exit()" in sentence:
+                break
 
 def main(_):
     if FLAGS.bleu > -1:
