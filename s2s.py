@@ -133,7 +133,7 @@ def train():
         # 初始化变量
         sess.run(tf.initialize_all_variables())
         ckpt = tf.train.get_checkpoint_state(FLAGS.model_dir)
-        print("ckpt path : ", ckpt.model_checkpoint_path)
+        #print("ckpt path : ", ckpt.model_checkpoint_path)
         if ckpt != None:
             print("load old model : ", ckpt.model_checkpoint_path)
             model.saver.restore(sess, ckpt.model_checkpoint_path)
