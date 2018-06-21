@@ -290,7 +290,16 @@ def test():
         model.batch_size = 1
         # 初始化变量
         sess.run(tf.initialize_all_variables())
-        model.saver.restore(sess, os.path.join(FLAGS.model_dir, FLAGS.model_name))
+        
+        ckpt =tf.train.get_checkpoint_state(FLAGS.model_dir)
+        if ckpt == None or ckpt.model_checkpoint_path == None:
+            print('restore model fail')
+            return 
+
+        print('restore model file %s' % ckpt.model_checkpoint_path)
+        print(ckpt.model_checkpoint_path)
+        
+        model.saver.restore(sess,ckpt.model_checkpoint_path)
         print("Input 'exit()' to exit test mode!")
         sys.stdout.write("me > ")
         sys.stdout.flush()
